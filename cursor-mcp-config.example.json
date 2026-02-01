@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "document-manager-my-app": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/document-manager-mcp/build/index.js"],
+      "env": {
+        "DOCS_PROJECT_ROOT": "/ABSOLUTE/PATH/TO/my-app",
+        "DOCS_PROJECT_NAME": "my-app"
+      }
+    },
+    "document-manager-backend": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/document-manager-mcp/build/index.js"],
+      "env": {
+        "DOCS_PROJECT_ROOT": "/ABSOLUTE/PATH/TO/backend",
+        "DOCS_PROJECT_NAME": "backend-api"
+      }
+    }
+  }
+}

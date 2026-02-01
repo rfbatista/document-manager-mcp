@@ -1,0 +1,47 @@
+{
+  "name": "document-manager-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for product documentation (feature specs, JTBD, user stories, API docs) stored as markdown",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "document-manager-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
+    "start": "node build/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "documentation",
+    "markdown",
+    "product-docs",
+    "cursor"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "build"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rfbatista/document-manager-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rfbatista/document-manager-mcp/issues"
+  },
+  "homepage": "https://github.com/rfbatista/document-manager-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
