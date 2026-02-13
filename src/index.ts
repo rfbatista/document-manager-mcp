@@ -13,6 +13,11 @@ import {
   isValidDocType,
   type DocType,
 } from "./paths.js";
+import {
+  semanticSearch,
+  invalidateIndex,
+  isSemanticSearchEnabled,
+} from "./search/semantic.js";
 
 const DEFAULT_VISION_STRATEGY_TEMPLATE = `# Product Vision and Strategy
 
@@ -130,6 +135,7 @@ server.registerTool(
       const filePath = getDocPath(root, docType as DocType, slug);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, content, "utf-8");
+      invalidateIndex(root);
       return textResult(`Wrote ${docType}/${path.basename(filePath)}`);
     } catch (err) {
       return errorResult(err instanceof Error ? err.message : String(err));
@@ -159,6 +165,7 @@ server.registerTool(
       }
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, content ?? "", "utf-8");
+      invalidateIndex(root);
       return textResult(`Created ${docType}/${path.basename(filePath)}`);
     } catch (err) {
       return errorResult(err instanceof Error ? err.message : String(err));
@@ -185,6 +192,7 @@ server.registerTool(
         return errorResult(`File not found: ${docType}/${slug}`);
       }
       fs.unlinkSync(filePath);
+      invalidateIndex(root);
       return textResult(`Deleted ${docType}/${slug}`);
     } catch (err) {
       return errorResult(err instanceof Error ? err.message : String(err));
@@ -196,18 +204,40 @@ server.registerTool(
   "search_docs",
   {
     description:
-      "Search documentation by text (case-insensitive). Optionally limit to a doc type.",
+      "Search documentation by text. Use semantic search (by meaning) when local embeddings are enabled (DOCS_EMBEDDING_PROVIDER=local), otherwise keyword (case-insensitive) search.",
     inputSchema: {
       query: z.string().min(1).describe("Text to search for in document content"),
       docType: z
         .enum(["feature-specs", "jtbd", "user-stories", "api"])
         .optional()
         .describe("Limit search to this doc type"),
+      mode: z
+        .enum(["keyword", "semantic"])
+        .optional()
+        .describe("Search mode: keyword (exact text) or semantic (by meaning). Default: semantic if embeddings enabled, else keyword."),
+      limit: z.number().int().min(1).max(50).optional().describe("Max results (default 10)"),
     },
   },
-  async ({ query, docType }) => {
+  async ({ query, docType, mode, limit }) => {
     try {
       const root = getProjectRoot();
+      const useSemantic =
+        mode === "semantic" || (mode !== "keyword" && isSemanticSearchEnabled());
+
+      if (useSemantic) {
+        const results = await semanticSearch(root, query, {
+          docType: docType as DocType | undefined,
+          limit: limit ?? 10,
+        });
+        if (results.length === 0) {
+          return textResult(`No documents semantically matching "${query}" found.`);
+        }
+        const lines = results.map(
+          (m) => `- **${m.docType}** / ${m.slug} (${m.score.toFixed(2)})\n  ${m.snippet.trim()}`
+        );
+        return textResult(`Found ${results.length} match(es) (semantic):\n\n${lines.join("\n\n")}`);
+      }
+
       const items = listDocFiles(root, docType as DocType | undefined);
       const lowerQuery = query.toLowerCase();
       const matches: { docType: DocType; slug: string; snippet: string }[] = [];

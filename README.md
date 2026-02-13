@@ -6,12 +6,12 @@ An MCP (Model Context Protocol) server for managing product documentation as mar
 
 All files are stored as **markdown** under a configurable project root, in these categories:
 
-| Type            | Folder          | Use for                          |
-|-----------------|-----------------|----------------------------------|
-| `feature-specs` | `docs/feature-specs/` | Feature specifications          |
-| `jtbd`          | `docs/jtbd/`    | Jobs to be done                  |
-| `user-stories`  | `docs/user-stories/` | User stories                 |
-| `api`           | `docs/api/`     | API documentation                |
+| Type            | Folder                | Use for                |
+| --------------- | --------------------- | ---------------------- |
+| `feature-specs` | `docs/feature-specs/` | Feature specifications |
+| `jtbd`          | `docs/jtbd/`          | Jobs to be done        |
+| `user-stories`  | `docs/user-stories/`  | User stories           |
+| `api`           | `docs/api/`           | API documentation      |
 
 A special file **`docs/product-vision-and-strategy.md`** holds the product vision and strategy. Use the **`product_vision_and_strategy`** tool to view it and create it (with a default template) if it doesn’t exist.
 
@@ -28,16 +28,16 @@ Example with two projects:
 {
   "mcpServers": {
     "document-manager-my-app": {
-      "command": "node",
-      "args": ["/path/to/document-manager-mcp/build/index.js"],
+      "command": "npx",
+      "args": ["document-manager-mcp"],
       "env": {
         "DOCS_PROJECT_ROOT": "/path/to/my-app",
         "DOCS_PROJECT_NAME": "my-app"
       }
     },
     "document-manager-backend": {
-      "command": "node",
-      "args": ["/path/to/document-manager-mcp/build/index.js"],
+      "command": "npx",
+      "args": ["document-manager-mcp"],
       "env": {
         "DOCS_PROJECT_ROOT": "/path/to/backend",
         "DOCS_PROJECT_NAME": "backend-api"
@@ -57,20 +57,21 @@ Set the **project root** so the MCP knows where to read/write files:
 - If unset, the server uses the current working directory when the server starts.
 
 Example: if `DOCS_PROJECT_ROOT=/Users/you/my-product`, then:
+
 - Feature specs go in `/Users/you/my-product/docs/feature-specs/`
 - API docs go in `/Users/you/my-product/docs/api/`, etc.
 
 ## MCP tools
 
-| Tool                         | Description |
-|------------------------------|-------------|
-| `list_docs`                  | List all docs, optionally filtered by type. |
-| `read_doc`                   | Read a doc by `docType` and `slug` (filename). |
-| `write_doc`                  | Create or overwrite a doc (markdown content). |
-| `create_doc`                 | Create a new doc; fails if it already exists. |
-| `delete_doc`                 | Delete a doc by type and slug. |
-| `search_docs`               | Search doc content by text; optional type filter. |
-| `product_vision_and_strategy` | View the product vision and strategy doc; creates `docs/product-vision-and-strategy.md` with a default template if it doesn’t exist. |
+| Tool                          | Description                                                                                                                                           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_docs`                   | List all docs, optionally filtered by type.                                                                                                           |
+| `read_doc`                    | Read a doc by `docType` and `slug` (filename).                                                                                                        |
+| `write_doc`                   | Create or overwrite a doc (markdown content).                                                                                                         |
+| `create_doc`                  | Create a new doc; fails if it already exists.                                                                                                         |
+| `delete_doc`                  | Delete a doc by type and slug.                                                                                                                        |
+| `search_docs`                 | Search by text. With `DOCS_EMBEDDING_PROVIDER=local`, uses semantic search (by meaning); otherwise keyword search. Optional type filter, mode, limit. |
+| `product_vision_and_strategy` | View the product vision and strategy doc; creates `docs/product-vision-and-strategy.md` with a default template if it doesn’t exist.                  |
 
 ## MCP resources
 
@@ -82,22 +83,28 @@ Docs are exposed as **resources** with URIs:
 
 Clients can list and read these resources like files (e.g. in Cursor’s MCP resource UI).
 
-## Install from npm
+## Run with npx (recommended)
+
+No install needed. Use **npx** so the package is run on demand:
 
 ```bash
-npm install document-manager-mcp
+npx document-manager-mcp
 ```
 
-Then in Cursor (or another MCP client), point to the installed binary. Two options:
+With environment variables:
 
-**Option A – from a project that has it as a dependency**
+```bash
+DOCS_PROJECT_ROOT=/path/to/your/project DOCS_PROJECT_NAME=my-project npx document-manager-mcp
+```
+
+In Cursor (or another MCP client), configure the server to run via npx:
 
 ```json
 {
   "mcpServers": {
     "document-manager": {
-      "command": "node",
-      "args": ["./node_modules/document-manager-mcp/build/index.js"],
+      "command": "npx",
+      "args": ["document-manager-mcp"],
       "env": {
         "DOCS_PROJECT_ROOT": "/ABSOLUTE/PATH/TO/YOUR/PROJECT",
         "DOCS_PROJECT_NAME": "your-project"
@@ -107,45 +114,48 @@ Then in Cursor (or another MCP client), point to the installed binary. Two optio
 }
 ```
 
-**Option B – global install and run by name**
+Replace `/ABSOLUTE/PATH/TO/YOUR/PROJECT` with the folder that should contain the `docs/` tree. `DOCS_PROJECT_NAME` is optional; use it when you run multiple Document Manager MCPs so you can tell them apart.
 
-```bash
-npm install -g document-manager-mcp
-```
+### Semantic search (local embeddings)
+
+To search by **meaning** (e.g. “login” matching “authentication”, “sign-in”) instead of exact text only, use a local embedding model. No API key required.
+
+Set in your MCP server `env`:
+
+- **`DOCS_EMBEDDING_PROVIDER=local`** — enables semantic search using [Transformers.js](https://huggingface.co/docs/transformers.js) and the default model `Xenova/all-MiniLM-L6-v2` (downloaded on first use, then cached).
+- **`DOCS_EMBEDDING_MODEL`** (optional) — another Hugging Face model ID for feature extraction (e.g. `Xenova/all-mpnet-base-v2` for higher quality, larger download).
+
+Example:
 
 ```json
 {
   "mcpServers": {
     "document-manager": {
-      "command": "document-manager-mcp",
+      "command": "npx",
+      "args": ["document-manager-mcp"],
       "env": {
-        "DOCS_PROJECT_ROOT": "/ABSOLUTE/PATH/TO/YOUR/PROJECT",
-        "DOCS_PROJECT_NAME": "your-project"
+        "DOCS_PROJECT_ROOT": "/path/to/your/project",
+        "DOCS_PROJECT_NAME": "my-project",
+        "DOCS_EMBEDDING_PROVIDER": "local"
       }
     }
   }
 }
 ```
 
-## Cursor setup (from source)
+The first semantic search will build an index under `.document-manager/embedding-index.json`; later searches reuse it until docs change. You can pass `mode: "keyword"` to `search_docs` to force exact-text search, or `mode: "semantic"` when local embeddings are enabled.
 
-1. **Build the server**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/document-manager-mcp.git
-   cd document-manager-mcp
-   npm install
-   npm run build
-   ```
+## Cursor setup
 
-2. **Configure Cursor**  
-   In Cursor: **Settings → MCP** (or edit your MCP config file). Add a server entry and set the project root via `env`:
+1. **Configure Cursor**  
+   In Cursor: **Settings → MCP** (or edit your MCP config file). Add a server entry using **npx** and set the project root via `env`:
 
    ```json
    {
      "mcpServers": {
        "document-manager": {
-         "command": "node",
-         "args": ["/ABSOLUTE/PATH/TO/document-manager-mcp/build/index.js"],
+         "command": "npx",
+         "args": ["document-manager-mcp"],
          "env": {
            "DOCS_PROJECT_ROOT": "/ABSOLUTE/PATH/TO/YOUR/PROJECT",
            "DOCS_PROJECT_NAME": "your-project"
@@ -155,23 +165,33 @@ npm install -g document-manager-mcp
    }
    ```
 
-   Replace:
-- `/ABSOLUTE/PATH/TO/document-manager-mcp` with the path to this repo.
-- `/ABSOLUTE/PATH/TO/YOUR/PROJECT` with the folder that should contain the `docs/` tree (feature-specs, jtbd, user-stories, api).
-- `your-project` with a short label so this instance is recognizable when you have multiple Document Manager MCPs (optional; omit to use the default name "document-manager").
+   Replace `/ABSOLUTE/PATH/TO/YOUR/PROJECT` with the folder that should contain the `docs/` tree (feature-specs, jtbd, user-stories, api). Use `DOCS_PROJECT_NAME` as a short label when you have multiple Document Manager MCPs (optional).
 
-3. **Restart Cursor** (or reload MCP) so it picks up the server.
+2. **Restart Cursor** (or reload MCP) so it picks up the server.
+
+### Running from source
+
+If you develop or fork this repo and want to run the built server without npx:
+
+```bash
+git clone https://github.com/rfbatista/document-manager-mcp.git
+cd document-manager-mcp
+npm install
+npm run build
+```
+
+Then in your MCP config use `"command": "node"` and `"args": ["/ABSOLUTE/PATH/TO/document-manager-mcp/build/index.js"]`.
 
 ## Claude Desktop setup
 
-Same idea: add the server to `claude_desktop_config.json` and set `DOCS_PROJECT_ROOT` in `env`:
+Add the server to `claude_desktop_config.json` and run it with npx:
 
 ```json
 {
   "mcpServers": {
     "document-manager": {
-      "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/document-manager-mcp/build/index.js"],
+      "command": "npx",
+      "args": ["document-manager-mcp"],
       "env": {
         "DOCS_PROJECT_ROOT": "/ABSOLUTE/PATH/TO/YOUR/PROJECT",
         "DOCS_PROJECT_NAME": "your-project"
@@ -191,36 +211,8 @@ npm run start   # run built server (stdio)
 
 Use **stderr** for logs; stdout is used for MCP JSON-RPC.
 
-## Publishing to npm
-
-To publish this package so others can install it with `npm install document-manager-mcp`:
-
-1. **Create an npm account** (if needed): [npmjs.com/signup](https://www.npmjs.com/signup).
-
-2. **Log in from the terminal**
-   ```bash
-   npm login
-   ```
-   Enter your npm username, password, and email.
-
-3. **Check the package name**
-   - The name `document-manager-mcp` might already be taken. Check: [npmjs.com/package/document-manager-mcp](https://www.npmjs.com/package/document-manager-mcp).
-   - If taken, use a scoped name in `package.json`, e.g. `"name": "@your-username/document-manager-mcp"`. Scoped packages are public by default when you run `npm publish --access public`.
-
-4. **Set repository URLs**  
-   In `package.json`, replace `YOUR_USERNAME` in `repository`, `bugs`, and `homepage` with your GitHub (or other) username.
-
-5. **Publish**
-   ```bash
-   npm run build    # optional; prepublishOnly runs it automatically
-   npm publish
-   ```
-   For a scoped package: `npm publish --access public`.
-
-6. **Bump and republish**  
-   For later releases, bump the version (e.g. `npm version patch`) then run `npm publish` again.
-
 ## License
 
 MIT
+
 # document-manager-mcp
